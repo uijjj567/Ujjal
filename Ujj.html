@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ujjal Agro Center</title>
+
+<style>
+body {font-family: Arial; margin:0; background:#f5fff5;}
+header {background:linear-gradient(90deg,green,darkgreen); color:white; padding:15px; text-align:center;}
+nav {background:#222; padding:10px; text-align:center;}
+nav a {color:white; margin:10px; text-decoration:none;}
+.container {padding:20px;}
+.product {
+  background:white;
+  padding:15px;
+  margin:15px;
+  border-radius:10px;
+  box-shadow:0 0 10px gray;
+}
+button {
+  background:green;
+  color:white;
+  padding:10px;
+  border:none;
+  cursor:pointer;
+  border-radius:5px;
+}
+button:hover {background:darkgreen;}
+#cart {background:white; padding:10px; margin:10px;}
+footer {background:green; color:white; text-align:center; padding:10px;}
+</style>
+
+</head>
+
+<body>
+
+<header>
+<h1>🌾 UJJAL AGRO CENTER</h1>
+<p>Trusted Pesticide & Fertilizer Shop</p>
+</header>
+
+<nav>
+<a href="#">Home</a>
+<a href="#">Products</a>
+<a href="#">Contact</a>
+</nav>
+
+<div class="container">
+
+<h2>🛒 আমাদের পণ্য</h2>
+
+<div class="product">
+<img src="https://via.placeholder.com/150">
+<h3>Coragen</h3>
+<p>ধানের পোকা দমনে কার্যকর</p>
+<p>দাম: ₹500</p>
+<button onclick="addToCart('Coragen',500)">কার্টে যোগ করুন</button>
+</div>
+
+<div class="product">
+<img src="https://via.placeholder.com/150">
+<h3>Emamectin Benzoate</h3>
+<p>পাতা খেকো পোকা নিয়ন্ত্রণ</p>
+<p>দাম: ₹350</p>
+<button onclick="addToCart('Emamectin',350)">কার্টে যোগ করুন</button>
+</div>
+
+<div class="product">
+<img src="https://via.placeholder.com/150">
+<h3>Glyphosate</h3>
+<p>আগাছা নিয়ন্ত্রণ</p>
+<p>দাম: ₹300</p>
+<button onclick="addToCart('Glyphosate',300)">কার্টে যোগ করুন</button>
+</div>
+
+<h2>🧾 Cart</h2>
+<div id="cart"></div>
+<button onclick="checkout()">WhatsApp Order</button>
+
+<h2>💳 UPI Payment</h2>
+<button onclick="payNow()">Pay Now</button>
+
+<h2>📞 Contact</h2>
+<a href="tel:9883558530"><button>Call Now</button></a>
+<a href="https://wa.me/919883558530"><button>WhatsApp</button></a>
+
+<hr>
+
+<h2>🌾 সমস্যার সমাধান</h2>
+
+<form onsubmit="sendProblem(); return false;">
+<input type="text" id="name" placeholder="আপনার নাম"><br><br>
+<input type="text" id="crop" placeholder="ফসলের নাম"><br><br>
+<textarea id="problem" placeholder="সমস্যা লিখুন"></textarea><br><br>
+<button type="submit">Send</button>
+</form>
+
+<button onclick="window.print()">Download Bill (PDF)</button>
+
+</div>
+
+<footer>
+<p>📞 Contact: 9883558530</p>
+<p>📍 West Bengal</p>
+</footer>
+
+<script>
+let cart = [];
+
+function addToCart(name, price){
+    cart.push({name, price});
+    alert(name + " added");
+    showCart();
+}
+
+function showCart(){
+    let total = 0;
+    let list = "";
+    
+    cart.forEach(item=>{
+        total += item.price;
+        list += item.name + " - ₹" + item.price + "<br>";
+    });
+
+    document.getElementById("cart").innerHTML = list + "<hr>Total: ₹" + total;
+}
+
+function checkout(){
+    let msg = "Order:\n";
+    cart.forEach(item=>{
+        msg += item.name + "\n";
+    });
+    window.open("https://wa.me/919883558530?text=" + encodeURIComponent(msg));
+}
+
+function payNow(){
+let upi = "upi://pay?pa=yourupi@upi&pn=UjjalAgro&cu=INR";
+window.open(upi);
+}
+
+function sendProblem(){
+let name = document.getElementById("name").value;
+let crop = document.getElementById("crop").value;
+let problem = document.getElementById("problem").value;
+
+let msg = `Farmer Problem:\nName: ${name}\nCrop: ${crop}\nProblem: ${problem}`;
+
+window.open("https://wa.me/919883558530?text=" + encodeURIComponent(msg));
+}
+</script>
+
+</body>
+</html>
