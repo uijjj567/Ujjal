@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mukshoda Bhandar Pro</title>
+<style>
+body{margin:0;font-family:Arial,sans-serif;background:#f4f6f9;}
+header{background:#2874f0;color:white;padding:15px;text-align:center;position:sticky;top:0;z-index:100;box-shadow:0 2px 5px rgba(0,0,0,0.2);}
+header h3{margin:0;}
+.container{padding:10px;margin-bottom:80px;}
+.company-section{margin-top:20px;}
+.company-section h3{background:#e2e6ea;padding:5px 10px;border-radius:5px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:5px;}
+.card{background:white;padding:10px;border-radius:10px;text-align:center;box-shadow:0 2px 5px rgba(0,0,0,0.15);transition:0.3s;cursor:pointer;}
+.card:hover{transform:translateY(-5px) scale(1.03);box-shadow:0 5px 15px rgba(0,0,0,0.3);}
+.card img{width:100%;height:100px;object-fit:cover;border-radius:5px;}
+button{background:#fb641b;color:white;border:none;padding:8px;margin-top:5px;width:100%;border-radius:5px;cursor:pointer;}
+button:hover{opacity:0.85;}
+input,select,textarea{width:100%;padding:5px;margin-top:5px;border-radius:5px;border:1px solid #ccc;}
+#cartPopup{position:fixed;top:0;right:-100%;width:90%;max-width:350px;height:100%;background:white;box-shadow:-2px 0 5px rgba(0,0,0,0.3);padding:10px;transition:0.3s;overflow-y:auto;z-index:1000;}
+#cartPopup.show{right:0;}
+#overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;z-index:900;}
+#overlay.show{display:block;}
+.modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.3);z-index:1001;display:none;width:90%;max-width:400px;}
+.modal.show{display:block;}
+.bottom{position:fixed;bottom:0;width:100%;background:white;display:flex;justify-content:space-around;padding:10px;box-shadow:0 -2px 5px rgba(0,0,0,0.1);}
+.swipe-container{overflow-x:auto;display:flex;gap:10px;padding-bottom:10px;}
+.swipe-container::-webkit-scrollbar{display:none;}
+</style>
+</head>
+<body>
+
+<header>
+<h3>🌾 Mukshoda Bhandar</h3>
+<p>Prop. Khokan Bera & Sons</p>
+<p>📍 Negua, Purba Medinipur, WB - 721448</p>
+<p>📞 9932186236 / 9883558530</p>
+</header>
+
+<div class="container">
+<button onclick="showLogin()">🔐 Admin Login</button>
+<input type="text" id="search" placeholder="Search Products..." onkeyup="searchProduct()">
+<div id="productList"></div>
+</div>
+
+<div id="overlay"></div>
+
+<!-- Cart Popup -->
+<div id="cartPopup">
+<h3>🛒 কার্ট</h3>
+<div id="cartItems"></div>
+<hr>
+<p id="cartTotal"></p>
+<label>Discount (₹): <input type="number" id="discount" value="0" min="0" onchange="showCart()"></label>
+<button onclick="checkout('upi')">💳 Pay via UPI</button>
+<button onclick="checkout('whatsapp')">📲 Order via WhatsApp</button>
+<button onclick="checkout('cod')">💵 Cash on Delivery</button>
+<button onclick="generatePDF()">📄 Download PDF</button>
+<button onclick="saveDaily()">📊 Save Daily Sale</button>
+<button onclick="showReport()">📈 Show Report</button>
+<button onclick="closeCart()">Close</button>
+</div>
+
+<!-- Login Modal -->
+<div id="loginModal" class="modal">
+<h3>Admin Login</h3>
+<input type="text" id="username" placeholder="Username">
+<input type="password" id="password" placeholder="Password">
+<button onclick="login()">Login</button>
+</div>
+
+<!-- Admin Panel Modal -->
+<div id="adminPanel" class="modal">
+<h3>Admin Panel</h3>
+<label>Product Name:</label>
+<input type="text" id="newName">
+<label>Company:</label>
+<input type="text" id="newCompany">
+<label>Price:</label>
+<input type="number" id="newPrice">
+<label>Sizes (comma separated):</label>
+<input type="text" id="newSizes">
+<label>Product Image:</label>
+<input type="file" id="newImgFile" accept="image/*">
+<img id="previewImg" src="" style="width:100%;margin-top:5px;display:none;">
+<button onclick="addOrUpdateProduct()">Add / Update Product</button>
+<hr>
+<h4>Existing Products</h4>
+<div id="adminProductList"></div>
+<button onclick="closeAdmin()">Close</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// Products and Cart
+let products = JSON.parse(localStorage.getItem("products")||JSON.stringify([
+{company:"Smith",name:"Cameo",price:300,img:"https://via.placeholder.com/150",sizes:["1L","500ml","250ml","100ml"]},
+{company:"Hindustan",name:"Hind Star",price:320,img:"https://via.placeholder.com/150",sizes:["1L","500ml","250ml","100ml"]}
+]));
+let cart = JSON.parse(localStorage.getItem("cart")||"[]");
+let editingIndex = -1;
+
+// Load products on homepage
+function loadProducts(list){
+let html="";
+let companies=[...new Set(list.map(p=>p.company))];
+companies.forEach(c=>{
+html+='<div class="company-section"><h3>'+c+'</h3><div class="swipe-container">';
+list.filter(p=>p.company===c).forEach((p,index)=>{
+html+=`<div class="card">
+<img src="${p.img}">
+<h4>${p.name}</h4>
+<p>₹${p.price}</p>
+<select id="size_${index}">${p.sizes.map(s=>`<option>${s}</option>`).join("")}</select>
+<input type="number" id="qty_${index}" value="1" min="1">
+<button onclick="addToCart(${index})">Add</button>
+</div>`;
+});
+html+='</div></div>';
+});
+document.getElementById("productList").innerHTML=html;
+}
+
+// Cart functions
+function addToCart(index){
+let p=products[index];
+let size=document.getElementById("size_"+index).value;
+let qty=parseInt(document.getElementById("qty_"+index).value);
+cart.push({name:p.name,price:p.price,size,qty});
+localStorage.setItem("cart",JSON.stringify(cart));
+showCart();
+}
+function showCart(){
+document.getElementById("overlay").classList.add("show");
+document.getElementById("cartPopup").classList.add("show");
+let html=""; let total=0;
+cart.forEach((i,ind)=>{
+let sub=i.price*i.qty; total+=sub;
+html+=`${i.name} (${i.size}) x ${i.qty} = ₹${sub} <button onclick="removeItem(${ind})">❌</button><br>`;
+});
+let discount=parseInt(document.getElementById("discount")?.value||0);
+let gst=(total*0.18).toFixed(0);
+let final=total+parseInt(gst)-discount;
+document.getElementById("cartItems").innerHTML=html;
+document.getElementById("cartTotal").innerHTML=`Subtotal: ₹${total}<br>GST(18%): ₹${gst}<br>Discount: ₹${discount}<br>Total: ₹${final}`;
+}
+function removeItem(i){cart.splice(i,1);localStorage.setItem("cart",JSON.stringify(cart));showCart();}
+function closeCart(){document.getElementById("cartPopup").classList.remove("show");document.getElementById("overlay").classList.remove("show");}
+
+// Search
+function searchProduct(){let v=document.getElementById("search").value.toLowerCase();loadProducts(products.filter(p=>p.name.toLowerCase().includes(v)||p.company.toLowerCase().includes(v)));}
+
+// Admin Login
+function showLogin(){document.getElementById("loginModal").classList.add("show");document.getElementById("overlay").classList.add("show");}
+function login(){
+let u=document.getElementById("username").value;
+let p=document.getElementById("password").value;
+if(u=="ujjalbera9351@gmail.com" && p=="Ujjal@2000"){
+alert("Login Successful");
+document.getElementById("loginModal").classList.remove("show");
+document.getElementById("overlay").classList.remove("show");
+document.getElementById("adminPanel").classList.add("show");
+loadAdminProducts();
+}else{alert("Wrong Credentials");}
+}
+function closeAdmin(){document.getElementById("adminPanel").classList.remove("show");document.getElementById("overlay").classList.remove("show");}
+
+// Image Preview
+document.getElementById("newImgFile").addEventListener("change",function(e){
+let reader=new FileReader();
+reader.onload=function(ev){document.getElementById("previewImg").src=ev.target.result; document.getElementById("previewImg").style.display="block";}
+reader.readAsDataURL(this.files[0]);
+});
+
+// Add or Update Product
+function addOrUpdateProduct(){
+let name=document.getElementById("newName").value;
+let company=document.getElementById("newCompany").value;
+let price=parseInt(document.getElementById("newPrice").value);
+let sizes=document.getElementById("newSizes").value.split(",").map(s=>s.trim());
+let img=document.getElementById("previewImg").src;
+if(!name||!company||!price||!img||sizes.length==0){alert("সব ফিল্ড পূরণ করুন!");return;}
+if(editingIndex>=0){ // Update
+products[editingIndex]={name,company,price,img,sizes};
+editingIndex=-1;
+alert("Product Updated!");
+}else{ // Add
+products.push({name,company,price,img,sizes});
+alert("Product Added!");
+}
+localStorage.setItem("products",JSON.stringify(products));
+loadProducts(products);
+loadAdminProducts();
+document.getElementById("newName").value="";
+document.getElementById("newCompany").value="";
+document.getElementById("newPrice").value="";
+document.getElementById("newSizes").value="";
+document.getElementById("newImgFile").value="";
+document.getElementById("previewImg").style.display="none";
+}
+
+// Load Admin Products
+function loadAdminProducts(){
+let html="";
+products.forEach((p,i)=>{
+html+=`${p.name} (${p.company}) ₹${p.price} <button onclick="editProduct(${i})">Edit</button> <button onclick="deleteProduct(${i})">Delete</button><br>`;
+});
+document.getElementById("adminProductList").innerHTML=html;
+}
+function editProduct(i){
+let p=products[i];
+editingIndex=i;
+document.getElementById("newName").value=p.name;
+document.getElementById("newCompany").value=p.company;
+document.getElementById("newPrice").value=p.price;
+document.getElementById("newSizes").value=p.sizes.join(",");
+document.getElementById("previewImg").src=p.img;
+document.getElementById("previewImg").style.display="block";
+}
+function deleteProduct(i){if(confirm("Are you sure?")){products.splice(i,1);localStorage.setItem("products",JSON.stringify(products));loadProducts(products);loadAdminProducts();}}
+
+// Checkout
+function checkout(method){
+let msg="Mukshoda Bhandar Order\n";let total=0;
+cart.forEach(i=>{msg+=i.name+" "+i.size+" x"+i.qty+" = ₹"+(i.price*i.qty)+"\n"; total+=i.price*i.qty;});
+let gst=(total*0.18).toFixed(0);
+let discount=parseInt(document.getElementById("discount").value||0);
+let final=parseInt(total)+parseInt(gst)-discount;
+msg+="GST(18%): ₹"+gst+"\nDiscount: ₹"+discount+"\nTotal: ₹"+final;
+if(method=='upi'){window.open(`upi://pay?pa=9883558530@ybl&pn=MukshodaBhandar&tn=Order&am=${final}&cu=INR`);}
+else if(method=='whatsapp'){window.open("https://wa.me/919883558530?text="+encodeURIComponent(msg));}
+else{alert("Cash on Delivery selected\n"+msg);}
+}
+
+// PDF
+function generatePDF(){const {jsPDF}=window.jspdf;let doc=new jsPDF(),y=10; doc.text("Mukshoda Bhandar",10,y); y+=10; doc.text("Prop. Khokan Bera & Sons",10,y); y+=10; doc.text("Negua, Purba Medinipur",10,y); y+=10; doc.text("Mob: 9932186236",10,y); y+=10; let total=0; cart.forEach(i=>{let sub=i.price*i.qty; total+=sub; doc.text(`${i.name} ${i.size} x${i.qty} = ₹${sub}`,10,y); y+=10;}); let gst=(total*0.18).toFixed(0); let discount=parseInt(document.getElementById("discount").value||0); let final=parseInt(total)+parseInt(gst)-discount; doc.text(`GST: ₹${gst}`,10,y); y+=10; doc.text(`Discount: ₹${discount}`,10,y); y+=10; doc.text(`Total: ₹${final}`,10,y+10); doc.save("bill.pdf");}
+
+// Save & Report
+function saveDaily(){let total=cart.reduce((sum,i)=>sum+i.price*i.qty,0); let gst=(total*0.18).toFixed(0); let discount=parseInt(document.getElementById("discount").value||0); let final=parseInt(total)+parseInt(gst)-discount; let date=new Date().toLocaleDateString(); let old=JSON.parse(localStorage.getItem("sales")||"{}"); if(!old[date]) old[date]=0; old[date]+=final; localStorage.setItem("sales",JSON.stringify(old)); alert("Daily Sale Saved!");}
+function showReport(){let data=JSON.parse(localStorage.getItem("sales")||"{}"); let txt="Daily Sales Report\n"; for(let d in data){txt+=`${d} = ₹${data[d]}\n`; } alert(txt);}
+
+// Initial load
+loadProducts(products);
+
+</script>
+
+<div class="bottom">
+<button onclick="loadProducts(products)">🏠 Home</button>
+<button onclick="showCart()">🛒 Cart</button>
+</div>
+
+</body>
+</html>
